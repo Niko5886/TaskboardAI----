@@ -38,7 +38,8 @@ Use modular code structure, with separate files for different components, pages 
 -Use PostgreSQL as the database, with tables for users, projects, and tasks, etc.
 -Use Supabase Storage for file uploads (e.g. task attachments).
 -When changing the database schema, always use migrations to keep track of changes.
--After applying a migration in Supabase , keep a copy of the migration SQL file in the code.
+-After applying a migration in Supabase , keep a copy of the migration SQL file in the code.                                                                                     Never edit existing migration sfter they have been applied --> create a new migration for any further changes to the database schema.
+
 
 ## Authentication and Authorization
 -Use Supabase Auth for user authentication and authorization.

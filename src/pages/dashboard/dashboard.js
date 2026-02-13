@@ -62,7 +62,6 @@ export async function setupDashboardPage() {
     if (!projects || projects.length === 0) {
       if (projectsContainer) projectsContainer.innerHTML = '';
       if (noprojectsMsg) noprojectsMsg.style.display = 'block';
-      setupCreateProjectButton();
       return;
     }
 
@@ -102,7 +101,6 @@ export async function setupDashboardPage() {
     `).join('');
 
     if (projectsContainer) projectsContainer.innerHTML = projectsHtml;
-    setupCreateProjectButton();
 
   } catch (error) {
     console.error('Error:', error);
@@ -125,17 +123,6 @@ function updateStatistics(projectCount, tasks) {
   if (totalTasksEl) totalTasksEl.textContent = totalTasks;
   if (pendingTasksEl) pendingTasksEl.textContent = pendingTasks;
   if (doneTasksEl) doneTasksEl.textContent = doneTasks;
-}
-
-function setupCreateProjectButton() {
-  const createBtns = document.querySelectorAll('#create-project-btn, #create-project-btn-2');
-  
-  createBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      // TODO: Implement create project functionality
-      alert('Create project functionality coming soon!');
-    });
-  });
 }
 
 function escapeHtml(text) {

@@ -1,0 +1,79 @@
+<section class="container page-wrapper">
+  <div class="page-header mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/projects" data-navigo>Projects</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Edit Project</li>
+      </ol>
+    </nav>
+    <h1 class="h3 fw-bold mb-1">Edit Project</h1>
+    <p class="text-muted mb-0">Update your project details</p>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div id="project-loading" class="text-center py-5 d-none">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div id="load-error" class="alert alert-danger d-none" role="alert">
+    <strong>Error!</strong> <span id="load-error-message"></span>
+    <div class="mt-2">
+      <a href="/projects" class="btn btn-sm btn-primary" data-navigo>Back to Projects</a>
+    </div>
+  </div>
+
+  <div class="form-container d-none" id="form-container">
+    <form id="edit-project-form">
+      <!-- Error Message -->
+      <div id="form-error" class="alert alert-danger d-none" role="alert">
+        <strong>Error!</strong> <span id="form-error-message"></span>
+      </div>
+
+      <!-- Title -->
+      <div class="mb-4">
+        <label for="project-title" class="form-label fw-semibold">
+          Project Title <span class="text-danger">*</span>
+        </label>
+        <input 
+          type="text" 
+          class="form-control form-control-lg" 
+          id="project-title" 
+          name="title"
+          placeholder="Enter project title"
+          required
+          maxlength="100"
+        >
+        <div class="form-text">A clear, descriptive name for your project</div>
+      </div>
+
+      <!-- Description -->
+      <div class="mb-4">
+        <label for="project-description" class="form-label fw-semibold">
+          Description
+        </label>
+        <textarea 
+          class="form-control" 
+          id="project-description" 
+          name="description"
+          rows="4"
+          placeholder="Describe your project (optional)"
+          maxlength="500"
+        ></textarea>
+        <div class="form-text">Brief overview of what this project is about</div>
+      </div>
+
+      <!-- Actions -->
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="/projects" class="btn btn-outline-secondary" data-navigo>
+          <i class="bi bi-x-circle me-2"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          <i class="bi bi-check-circle me-2"></i>Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
