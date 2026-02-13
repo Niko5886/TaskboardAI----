@@ -1,0 +1,30 @@
+.page-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.page-login .page-wrapper {
+  min-height: auto;
+}
+
+.page-login .card {
+  border-radius: 12px;
+}
+
+.page-login .form-control {
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 10px 12px;
+}
+
+.page-login .form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.page-login .btn-primary {
+  border-radius: 8px;
+  font-weight: 600;
+}

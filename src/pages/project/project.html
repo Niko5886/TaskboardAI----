@@ -1,0 +1,45 @@
+<section class="container-fluid page-wrapper">
+  <div class="project-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-2">
+            <li class="breadcrumb-item"><a href="/dashboard" data-navigo>Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page" id="project-breadcrumb">Project</li>
+          </ol>
+        </nav>
+        <h1 class="h3 fw-bold mb-1" id="project-title">Loading...</h1>
+        <p class="text-muted mb-0" id="project-description"></p>
+      </div>
+      <div>
+        <button class="btn btn-success btn-sm" id="add-task-btn">
+          <i class="bi bi-plus-circle me-2"></i> New Task
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div id="project-loading" style="display: none; text-align: center; padding: 60px;">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div id="project-error" style="display: none;">
+    <div class="alert alert-danger" role="alert">
+      <h4 class="alert-heading">Error</h4>
+      <p id="error-message">Failed to load project.</p>
+      <hr>
+      <a href="/dashboard" class="btn btn-sm btn-primary" data-navigo>Back to Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Taskboard -->
+  <div id="taskboard" class="taskboard">
+    <div class="taskboard-columns" id="taskboard-columns">
+      <!-- Columns will be loaded here -->
+    </div>
+  </div>
+</section>

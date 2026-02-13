@@ -1,14 +1,29 @@
 import Navigo from 'navigo';
 import { routes } from './routes.js';
+import { initAuth } from '../utils/auth.js';
 
-export function initRouter({ renderApp }) {
+export async function initRouter({ renderApp }) {
+  // Initialize authentication
+  await initAuth();
+
   const router = new Navigo('/');
 
   routes.forEach((route) => {
-    router.on(route.path, () => {
+    router.on(route.path, async (match) => {
       document.title = route.title;
       renderApp(route.render());
       setActiveNavLink(window.location.pathname);
+      
+      // Call setup function if provided
+      if (route.setup) {
+        // Pass parameters to setup function if it's a dynamic route
+        if (route.isDynamic && match && match.data) {
+          route.setup(match.data.id);
+        } else {
+          route.setup();
+        }
+      }
+      
       router.updatePageLinks();
     });
   });
