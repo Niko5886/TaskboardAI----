@@ -1,0 +1,7 @@
+body {
+  background-color: var(--bs-body-bg);
+}
+
+.page-wrapper {
+  max-width: 1140px;
+}
