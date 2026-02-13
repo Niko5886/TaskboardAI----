@@ -1,5 +1,5 @@
 import Navigo from 'navigo';
-import { routes } from './routes.js';
+import { routes, notFoundRoute } from './routes.js';
 import { initAuth } from '../utils/auth.js';
 
 export async function initRouter({ renderApp }) {
@@ -29,7 +29,8 @@ export async function initRouter({ renderApp }) {
   });
 
   router.notFound(() => {
-    router.navigate('/');
+    document.title = notFoundRoute.title;
+    renderApp(notFoundRoute.render());
   });
 
   router.resolve();

@@ -3,6 +3,7 @@ import { renderDashboardPage, setupDashboardPage } from '../pages/dashboard/dash
 import { renderLoginPage, setupLoginPage } from '../pages/login/login.js';
 import { renderRegisterPage, setupRegisterPage } from '../pages/register/register.js';
 import { renderProjectPage, setupProjectPage } from '../pages/project/project.js';
+import { renderNotFoundPage } from '../pages/notfound/notfound.js';
 
 export const routes = [
   {
@@ -36,3 +37,9 @@ export const routes = [
     isDynamic: true
   }
 ];
+
+export const notFoundRoute = {
+  path: '/404',
+  title: 'Taskboard | 404 Not Found',
+  render: renderNotFoundPage
+};
