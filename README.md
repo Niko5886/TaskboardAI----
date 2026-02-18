@@ -113,6 +113,7 @@ Taskboard/
    - `20260213_004_seed_sample_data.sql`
    - `20260213_005_fix_rls_policies_authenticated.sql`
    - `20260213_006_fix_infinite_recursion_rls.sql`
+   - `20260218_007_add_mobile_app_project.sql` (optional - adds Mobile App Development project)
 
 ### Running the Application
 
@@ -143,6 +144,31 @@ The application uses four main tables:
 - **tasks** - Task items within projects
 
 All tables are protected with Row Level Security (RLS) policies to ensure data privacy and security.
+
+### Sample Projects
+
+The database includes sample projects with realistic tasks:
+
+#### 📋 Default Projects (from seed data)
+- **nik's Project** - Sample project with standard web development tasks
+- **maria's Project** - Sample project with standard web development tasks
+- **peter's Project** - Sample project with standard web development tasks
+
+#### 📱 Mobile App Development Project (optional)
+A specialized project template for mobile app development:
+- **Stages:** Backlog, In Development, Testing, Completed
+- **Tasks:** 15 pre-configured tasks for React Native development
+- **Features:** Authentication, Navigation, UI, API Integration, Push Notifications, Testing
+- See [db/MOBILE_APP_PROJECT.md](db/MOBILE_APP_PROJECT.md) for details
+
+To add the Mobile App Development project:
+```bash
+# Option 1: Run SQL migration in Supabase SQL Editor
+# Execute: db/migrations/20260218_007_add_mobile_app_project.sql
+
+# Option 2: Use Node.js seed script
+node db/seed-mobile-app.js
+```
 
 ## 🔐 Authentication & Authorization
 
