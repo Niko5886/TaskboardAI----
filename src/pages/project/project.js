@@ -525,6 +525,8 @@ async function handleTaskFormSubmit(event) {
   const stageId = document.querySelector('#task-form-stage-id')?.value;
   const title = document.querySelector('#task-title-input')?.value.trim();
   const description = document.querySelector('#task-description-input')?.value.trim() || '';
+  const statusValue = getTaskStatusValue();
+  const done = statusValue === 'done';
   const submitBtn = document.querySelector('#task-form-submit-btn');
 
   if (!title) {
@@ -539,10 +541,10 @@ async function handleTaskFormSubmit(event) {
     }
 
     if (mode === 'add') {
-      await addTask(stageId, title, description);
+      await addTask(stageId, title, description, done);
       showToast('Task added successfully.', 'success');
     } else {
-      await editTask(taskId, title, description);
+      await editTask(taskId, title, description, done);
       showToast('Task updated successfully.', 'success');
     }
 
@@ -600,6 +602,7 @@ function openTaskModal({ mode, stageId = '', task = null }) {
     stageIdInput.value = stageId;
     titleInput.value = '';
     descriptionInput.value = '';
+    setTaskStatusRadios(isDoneStage(stageId));
     if (modalTitle) modalTitle.textContent = 'Add New Task';
     if (submitBtn) submitBtn.textContent = 'Add Task';
   } else if (task) {
@@ -608,6 +611,7 @@ function openTaskModal({ mode, stageId = '', task = null }) {
     stageIdInput.value = task.stage_id;
     titleInput.value = task.title || '';
     descriptionInput.value = htmlToText(task.description_html || '');
+    setTaskStatusRadios(Boolean(task.done));
     if (modalTitle) modalTitle.textContent = 'Edit Task';
     if (submitBtn) submitBtn.textContent = 'Save Changes';
   }
@@ -627,7 +631,7 @@ function openDeleteTaskModal(task) {
   }
 }
 
-async function addTask(stageId, title, description) {
+async function addTask(stageId, title, description, done) {
   const supabase = getSupabase();
   const nextPosition = getNextPositionForStage(stageId);
 
@@ -639,7 +643,7 @@ async function addTask(stageId, title, description) {
       title,
       description_html: textToHtml(description),
       position: nextPosition,
-      done: isDoneStage(stageId)
+      done
     });
 
   if (error) {
@@ -647,13 +651,14 @@ async function addTask(stageId, title, description) {
   }
 }
 
-async function editTask(taskId, title, description) {
+async function editTask(taskId, title, description, done) {
   const supabase = getSupabase();
   const { error } = await supabase
     .from('tasks')
     .update({
       title,
       description_html: textToHtml(description),
+      done,
       updated_at: new Date().toISOString()
     })
     .eq('id', taskId)
@@ -711,6 +716,19 @@ function isDoneStage(stageId) {
   const stage = currentStages.find(item => String(item.id) === String(stageId));
   if (!stage) return false;
   return /done/i.test(stage.title || '');
+}
+
+function getTaskStatusValue() {
+  const checked = document.querySelector('input[name="task-status"]:checked');
+  return checked?.value || 'open';
+}
+
+function setTaskStatusRadios(isDone) {
+  const openRadio = document.querySelector('#task-status-open');
+  const doneRadio = document.querySelector('#task-status-done');
+
+  if (openRadio) openRadio.checked = !isDone;
+  if (doneRadio) doneRadio.checked = isDone;
 }
 
 function showError(message) {
