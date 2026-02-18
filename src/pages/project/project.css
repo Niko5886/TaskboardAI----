@@ -119,6 +119,12 @@
   gap: 12px;
   flex: 1;
   min-height: 200px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.column-tasks.drag-over {
+  background: #eef4ff;
 }
 
 .column-add-task-btn {
@@ -148,6 +154,11 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid #e0e0e0;
+}
+
+.task-card.dragging {
+  opacity: 0.45;
+  transform: rotate(1deg);
 }
 
 .task-card:hover {

@@ -12,6 +12,9 @@ let taskModalInstance = null;
 let deleteTaskModalInstance = null;
 let pendingDeleteTaskId = null;
 let isTaskSubmitting = false;
+let draggingTaskId = null;
+let isDraggingTask = false;
+let suppressNextTaskClick = false;
 
 export function renderProjectPage() {
   return `<div class="page-project">${pageTemplate}</div>`;
@@ -184,7 +187,7 @@ function renderTaskCard(task) {
   const doneIcon = task.done ? '<i class="bi bi-check-circle-fill text-success me-2"></i>' : '';
   
   return `
-    <div class="task-card ${doneClass}" data-task-id="${task.id}">
+    <div class="task-card ${doneClass}" data-task-id="${task.id}" draggable="true">
       <div class="task-header">
         ${doneIcon}<span class="task-title">${escapeHtml(task.title)}</span>
       </div>
@@ -206,6 +209,11 @@ function setupTaskboardEvents() {
   if (!columnsContainer) return;
 
   columnsContainer.onclick = (event) => {
+    if (suppressNextTaskClick || isDraggingTask) {
+      suppressNextTaskClick = false;
+      return;
+    }
+
     const addTaskBtn = event.target.closest('.add-task-column-btn');
     if (addTaskBtn) {
       openTaskModal({ mode: 'add', stageId: addTaskBtn.dataset.stageId });
@@ -237,6 +245,242 @@ function setupTaskboardEvents() {
       }
     }
   };
+
+  columnsContainer.ondragstart = (event) => {
+    const taskCard = event.target.closest('.task-card');
+    if (!taskCard) return;
+
+    draggingTaskId = taskCard.dataset.taskId;
+    isDraggingTask = true;
+    taskCard.classList.add('dragging');
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggingTaskId || '');
+    }
+  };
+
+  columnsContainer.ondragover = (event) => {
+    const columnTasks = event.target.closest('.column-tasks');
+    if (!columnTasks || !draggingTaskId) return;
+
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+
+    setDragOverColumn(columnTasks);
+    const dropIndex = getDropIndex(columnTasks, event.clientY);
+    placeDraggingCardPreview(columnTasks, dropIndex);
+  };
+
+  columnsContainer.ondragleave = (event) => {
+    const columnTasks = event.target.closest('.column-tasks');
+    if (!columnTasks) return;
+
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget && columnTasks.contains(relatedTarget)) {
+      return;
+    }
+
+    columnTasks.classList.remove('drag-over');
+  };
+
+  columnsContainer.ondrop = async (event) => {
+    const columnTasks = event.target.closest('.column-tasks');
+    if (!columnTasks) return;
+
+    event.preventDefault();
+
+    const targetStageId = columnTasks.dataset.stageId;
+    if (!targetStageId) {
+      clearDragOverColumns();
+      return;
+    }
+
+    if (!draggingTaskId && event.dataTransfer) {
+      draggingTaskId = event.dataTransfer.getData('text/plain');
+    }
+
+    if (!draggingTaskId) {
+      clearDragOverColumns();
+      return;
+    }
+
+    const dropIndex = getDropIndex(columnTasks, event.clientY);
+
+    try {
+      await moveTaskByDragAndDrop(draggingTaskId, targetStageId, dropIndex);
+      await refreshTaskboardData();
+    } catch (error) {
+      console.error('Task move failed:', error);
+      showToast('Failed to move task.', 'error');
+      await refreshTaskboardData();
+    } finally {
+      suppressNextTaskClick = true;
+      setTimeout(() => {
+        suppressNextTaskClick = false;
+      }, 120);
+      clearDragOverColumns();
+    }
+  };
+
+  columnsContainer.ondragend = (event) => {
+    const taskCard = event.target.closest('.task-card');
+    if (taskCard) {
+      taskCard.classList.remove('dragging');
+    }
+
+    clearDragOverColumns();
+    draggingTaskId = null;
+    setTimeout(() => {
+      isDraggingTask = false;
+    }, 0);
+  };
+}
+
+function clearDragOverColumns() {
+  document.querySelectorAll('.column-tasks.drag-over').forEach((column) => {
+    column.classList.remove('drag-over');
+  });
+}
+
+function setDragOverColumn(columnTasks) {
+  document.querySelectorAll('.column-tasks.drag-over').forEach((column) => {
+    if (column !== columnTasks) {
+      column.classList.remove('drag-over');
+    }
+  });
+
+  columnTasks.classList.add('drag-over');
+}
+
+function getDropIndex(columnTasks, clientY) {
+  const cards = [...columnTasks.querySelectorAll('.task-card:not(.dragging)')];
+
+  for (let index = 0; index < cards.length; index += 1) {
+    const card = cards[index];
+    const rect = card.getBoundingClientRect();
+    const midPoint = rect.top + rect.height / 2;
+    if (clientY < midPoint) {
+      return index;
+    }
+  }
+
+  return cards.length;
+}
+
+function placeDraggingCardPreview(columnTasks, dropIndex) {
+  const draggingCard = document.querySelector('.task-card.dragging');
+  if (!draggingCard) return;
+
+  const cards = [...columnTasks.querySelectorAll('.task-card:not(.dragging)')];
+  const addTaskButton = columnTasks.querySelector('.column-add-task-btn');
+  const referenceNode = cards[dropIndex] || addTaskButton || null;
+
+  if (referenceNode) {
+    columnTasks.insertBefore(draggingCard, referenceNode);
+  } else {
+    columnTasks.appendChild(draggingCard);
+  }
+}
+
+function getStageTasksSorted(stageId) {
+  return currentTasks
+    .filter(task => String(task.stage_id) === String(stageId))
+    .sort((first, second) => (Number(first.position) || 0) - (Number(second.position) || 0));
+}
+
+function buildTaskPositionUpdates(taskId, targetStageId, targetIndex) {
+  const movingTask = currentTasks.find(task => String(task.id) === String(taskId));
+  if (!movingTask) {
+    return [];
+  }
+
+  const sourceStageId = String(movingTask.stage_id);
+  const destinationStageId = String(targetStageId);
+  const sourceTasksWithoutMoved = getStageTasksSorted(sourceStageId)
+    .filter(task => String(task.id) !== String(taskId));
+
+  const destinationTasks = sourceStageId === destinationStageId
+    ? sourceTasksWithoutMoved
+    : getStageTasksSorted(destinationStageId);
+
+  const safeIndex = Math.max(0, Math.min(targetIndex, destinationTasks.length));
+  destinationTasks.splice(safeIndex, 0, {
+    ...movingTask,
+    stage_id: destinationStageId,
+    done: isDoneStage(destinationStageId)
+  });
+
+  const updates = [];
+
+  const collectUpdatesForStage = (stageId, tasksForStage) => {
+    const doneValue = isDoneStage(stageId);
+
+    tasksForStage.forEach((task, index) => {
+      const nextPosition = index + 1;
+      const stageChanged = String(task.stage_id) !== String(stageId);
+      const positionChanged = Number(task.position) !== nextPosition;
+      const doneChanged = Boolean(task.done) !== Boolean(doneValue);
+
+      if (stageChanged || positionChanged || doneChanged) {
+        updates.push({
+          id: task.id,
+          stage_id: stageId,
+          position: nextPosition,
+          done: doneValue
+        });
+      }
+    });
+  };
+
+  if (sourceStageId === destinationStageId) {
+    collectUpdatesForStage(destinationStageId, destinationTasks);
+  } else {
+    collectUpdatesForStage(sourceStageId, sourceTasksWithoutMoved);
+    collectUpdatesForStage(destinationStageId, destinationTasks);
+  }
+
+  return updates;
+}
+
+async function persistTaskPositionUpdates(updates) {
+  if (!updates.length) {
+    return;
+  }
+
+  const supabase = getSupabase();
+  const now = new Date().toISOString();
+  const operations = updates.map((taskUpdate) => (
+    supabase
+      .from('tasks')
+      .update({
+        stage_id: taskUpdate.stage_id,
+        position: taskUpdate.position,
+        done: taskUpdate.done,
+        updated_at: now
+      })
+      .eq('id', taskUpdate.id)
+      .eq('project_id', currentProjectId)
+  ));
+
+  const results = await Promise.all(operations);
+  const failedResult = results.find(result => result.error);
+
+  if (failedResult?.error) {
+    throw failedResult.error;
+  }
+}
+
+async function moveTaskByDragAndDrop(taskId, targetStageId, targetIndex) {
+  const updates = buildTaskPositionUpdates(taskId, targetStageId, targetIndex);
+
+  if (!updates.length) {
+    return;
+  }
+
+  await persistTaskPositionUpdates(updates);
 }
 
 function setupTaskModals() {
