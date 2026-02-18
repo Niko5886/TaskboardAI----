@@ -172,6 +172,19 @@
   background: #f0f8f0;
 }
 
+.task-cover-image-wrap {
+  margin: -12px -12px 10px;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.task-cover-image {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+}
+
 .task-actions {
   display: flex;
   justify-content: flex-end;

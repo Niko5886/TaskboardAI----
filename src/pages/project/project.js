@@ -27,6 +27,7 @@ let suppressNextTaskClick = false;
 let currentTaskAttachmentsByTaskId = new Map();
 
 const TASK_ATTACHMENTS_BUCKET = 'task-attachments';
+const IMAGE_FILE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'];
 
 export function renderProjectPage() {
   return `<div class="page-project">${pageTemplate}</div>`;
@@ -257,9 +258,24 @@ function renderTaskboard(stages, tasks) {
 function renderTaskCard(task) {
   const doneClass = task.done ? 'task-done' : '';
   const doneIcon = task.done ? '<i class="bi bi-check-circle-fill text-success me-2"></i>' : '';
+  const coverImageAttachment = getTaskCardCoverImage(task.id);
+  const coverImageHtml = coverImageAttachment
+    ? `
+      <div class="task-cover-image-wrap">
+        <img
+          src="${escapeHtml(coverImageAttachment.preview_url)}"
+          alt="${escapeHtml(coverImageAttachment.file_name || task.title || 'Task cover image')}"
+          class="task-cover-image"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    `
+    : '';
   
   return `
     <div class="task-card ${doneClass}" data-task-id="${task.id}" draggable="true">
+      ${coverImageHtml}
       <div class="task-header">
         ${doneIcon}<span class="task-title">${escapeHtml(task.title)}</span>
       </div>
@@ -274,6 +290,26 @@ function renderTaskCard(task) {
       </div>
     </div>
   `;
+}
+
+function getTaskCardCoverImage(taskId) {
+  const attachments = currentTaskAttachmentsByTaskId.get(taskId) || [];
+  return attachments.find((attachment) => isImageAttachment(attachment)) || null;
+}
+
+function isImageAttachment(attachment) {
+  if (!attachment?.preview_url) {
+    return false;
+  }
+
+  const fileType = String(attachment.file_type || '').toLowerCase();
+  if (fileType.startsWith('image/')) {
+    return true;
+  }
+
+  const fileName = String(attachment.file_name || '').toLowerCase();
+  const extension = fileName.includes('.') ? fileName.split('.').pop() : '';
+  return IMAGE_FILE_EXTENSIONS.includes(extension);
 }
 
 function setupTaskboardEvents() {
