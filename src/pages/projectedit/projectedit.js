@@ -1,6 +1,7 @@
 import pageTemplate from './projectedit.html?raw';
 import './projectedit.css';
 import { getSupabase, getCurrentUser } from '../../utils/auth.js';
+import { showToast } from '../../utils/toast.js';
 
 let currentProjectId = null;
 
@@ -118,8 +119,11 @@ function setupForm() {
         return;
       }
 
-      // Redirect to projects list
-      window.location.href = '/projects';
+      // Show toast and redirect
+      showToast('Project updated successfully', 'success', 3000);
+      setTimeout(() => {
+        window.location.href = '/projects';
+      }, 500);
 
     } catch (error) {
       console.error('Error:', error);

@@ -1,6 +1,7 @@
 import pageTemplate from './projects.html?raw';
 import './projects.css';
 import { getSupabase, getCurrentUser } from '../../utils/auth.js';
+import { showToast } from '../../utils/toast.js';
 import { Modal } from 'bootstrap';
 
 let deleteModal = null;
@@ -152,10 +153,11 @@ function setupDeleteConfirmation() {
         if (error) {
           console.error('Error deleting project:', error);
           showError('Failed to delete project. Please try again.');
-        } else {
-          deleteModal?.hide();
-          await loadProjects();
+          return;
         }
+
+        deleteModal?.hide();
+        showToast('Project deleted successfully', 'success', 3000);
       } catch (error) {
         console.error('Error:', error);
         showError('An unexpected error occurred.');
@@ -164,6 +166,9 @@ function setupDeleteConfirmation() {
         confirmBtn.innerHTML = '<i class="bi bi-trash me-2"></i>Delete Project';
         projectToDelete = null;
       }
+
+      // Reload projects (outside try-catch so it uses its own error handling)
+      await loadProjects();
     });
   }
 }
