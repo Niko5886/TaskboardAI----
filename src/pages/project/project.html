@@ -73,33 +73,7 @@
         </div>
         <form id="task-form">
           <div class="modal-body">
-            <input type="hidden" id="task-form-mode" value="add" />
-            <input type="hidden" id="task-form-task-id" value="" />
-            <input type="hidden" id="task-form-stage-id" value="" />
-
-            <div class="mb-3">
-              <label for="task-title-input" class="form-label">Title</label>
-              <input type="text" class="form-control" id="task-title-input" maxlength="120" required />
-            </div>
-
-            <div>
-              <label for="task-description-input" class="form-label">Description</label>
-              <textarea class="form-control" id="task-description-input" rows="5" maxlength="4000"></textarea>
-            </div>
-
-            <div class="mt-3">
-              <label class="form-label d-block">Status</label>
-              <div class="btn-group w-100" role="group" aria-label="Task status">
-                <input type="radio" class="btn-check" name="task-status" id="task-status-open" autocomplete="off" value="open" checked>
-                <label class="btn btn-outline-secondary" for="task-status-open">
-                  <i class="bi bi-circle me-1"></i>Open
-                </label>
-                <input type="radio" class="btn-check" name="task-status" id="task-status-done" autocomplete="off" value="done">
-                <label class="btn btn-outline-success" for="task-status-done">
-                  <i class="bi bi-check-circle me-1"></i>Done (Closed)
-                </label>
-              </div>
-            </div>
+            <div id="task-editor-root"></div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

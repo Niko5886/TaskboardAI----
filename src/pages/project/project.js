@@ -3,6 +3,15 @@ import './project.css';
 import { Modal } from 'bootstrap';
 import { getSupabase, getCurrentUser } from '../../utils/auth.js';
 import { showToast } from '../../utils/toast.js';
+import {
+  renderTaskEditor,
+  setupTaskEditor,
+  setTaskEditorValues,
+  setTaskEditorAttachments,
+  getTaskEditorValues,
+  getTaskEditorAttachmentChanges,
+  teardownTaskEditor
+} from '../../components/taskeditor/taskeditor.js';
 
 let currentProjectId = null;
 let currentProject = null;
@@ -15,6 +24,9 @@ let isTaskSubmitting = false;
 let draggingTaskId = null;
 let isDraggingTask = false;
 let suppressNextTaskClick = false;
+let currentTaskAttachmentsByTaskId = new Map();
+
+const TASK_ATTACHMENTS_BUCKET = 'task-attachments';
 
 export function renderProjectPage() {
   return `<div class="page-project">${pageTemplate}</div>`;
@@ -32,6 +44,7 @@ export async function setupProjectPage(projectId) {
   pendingDeleteTaskId = null;
   taskModalInstance = null;
   deleteTaskModalInstance = null;
+  teardownTaskEditor();
 
   const loadingSpinner = document.querySelector('#project-loading');
   const errorContainer = document.querySelector('#project-error');
@@ -51,6 +64,7 @@ export async function setupProjectPage(projectId) {
     updateProjectHeader(currentProject);
     updateProjectInfoTable(currentProject, currentStages, currentTasks);
     renderTaskboard(currentStages, currentTasks);
+    mountTaskEditor();
     setupTaskboardEvents();
     setupTaskModals();
 
@@ -104,6 +118,7 @@ async function loadProjectData() {
   currentProject = project;
   currentStages = stages || [];
   currentTasks = tasks || [];
+  await loadTaskAttachments(currentTasks.map((task) => task.id));
 }
 
 async function refreshTaskboardData() {
@@ -119,8 +134,65 @@ async function refreshTaskboardData() {
   }
 
   currentTasks = tasks || [];
+  await loadTaskAttachments(currentTasks.map((task) => task.id));
   updateProjectInfoTable(currentProject, currentStages, currentTasks);
   renderTaskboard(currentStages, currentTasks);
+}
+
+async function loadTaskAttachments(taskIds) {
+  currentTaskAttachmentsByTaskId = new Map();
+
+  if (!taskIds?.length) {
+    return;
+  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('task_attachments')
+    .select('id, task_id, file_name, file_type, file_size, storage_path, created_at')
+    .in('task_id', taskIds)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.warn('Task attachments table is unavailable or inaccessible:', error);
+    return;
+  }
+
+  const attachments = data || [];
+  const withPreviewUrls = await Promise.all(
+    attachments.map(async (attachment) => {
+      const previewUrl = await createAttachmentSignedUrl(attachment.storage_path);
+      return {
+        ...attachment,
+        preview_url: previewUrl
+      };
+    })
+  );
+
+  withPreviewUrls.forEach((attachment) => {
+    const existing = currentTaskAttachmentsByTaskId.get(attachment.task_id) || [];
+    existing.push(attachment);
+    currentTaskAttachmentsByTaskId.set(attachment.task_id, existing);
+  });
+}
+
+async function createAttachmentSignedUrl(storagePath) {
+  if (!storagePath) {
+    return '';
+  }
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .storage
+    .from(TASK_ATTACHMENTS_BUCKET)
+    .createSignedUrl(storagePath, 3600);
+
+  if (error) {
+    console.error('Failed to create attachment signed URL:', error);
+    return '';
+  }
+
+  return data?.signedUrl || '';
 }
 
 function updateProjectHeader(project) {
@@ -483,6 +555,15 @@ async function moveTaskByDragAndDrop(taskId, targetStageId, targetIndex) {
   await persistTaskPositionUpdates(updates);
 }
 
+function mountTaskEditor() {
+  const taskEditorRoot = document.querySelector('#task-editor-root');
+  if (!taskEditorRoot) {
+    return;
+  }
+
+  taskEditorRoot.innerHTML = renderTaskEditor();
+}
+
 function setupTaskModals() {
   const taskModalEl = document.querySelector('#task-modal');
   const deleteModalEl = document.querySelector('#delete-task-modal');
@@ -497,19 +578,20 @@ function setupTaskModals() {
     deleteTaskModalInstance = new Modal(deleteModalEl);
   }
 
+  setupTaskEditor();
+
   if (taskForm) {
-    // Remove any previous listeners to prevent duplicate handlers
-    const newForm = taskForm.cloneNode(true);
-    taskForm.parentNode.replaceChild(newForm, taskForm);
-    
-    const updatedForm = document.querySelector('#task-form');
-    if (updatedForm) {
-      updatedForm.addEventListener('submit', handleTaskFormSubmit);
-    }
+    taskForm.onsubmit = handleTaskFormSubmit;
   }
 
   if (confirmDeleteBtn) {
-    confirmDeleteBtn.addEventListener('click', handleDeleteConfirm);
+    confirmDeleteBtn.onclick = handleDeleteConfirm;
+  }
+
+  if (taskModalEl) {
+    taskModalEl.addEventListener('hidden.bs.modal', () => {
+      setTaskEditorAttachments([]);
+    });
   }
 }
 
@@ -520,13 +602,9 @@ async function handleTaskFormSubmit(event) {
     return;
   }
 
-  const mode = document.querySelector('#task-form-mode')?.value || 'add';
-  const taskId = document.querySelector('#task-form-task-id')?.value;
-  const stageId = document.querySelector('#task-form-stage-id')?.value;
-  const title = document.querySelector('#task-title-input')?.value.trim();
-  const description = document.querySelector('#task-description-input')?.value.trim() || '';
-  const statusValue = getTaskStatusValue();
-  const done = statusValue === 'done';
+  const formValues = getTaskEditorValues();
+  const { newFiles, removedAttachments } = getTaskEditorAttachmentChanges();
+  const { mode, taskId, stageId, title, description, done } = formValues;
   const submitBtn = document.querySelector('#task-form-submit-btn');
 
   if (!title) {
@@ -541,10 +619,24 @@ async function handleTaskFormSubmit(event) {
     }
 
     if (mode === 'add') {
-      await addTask(stageId, title, description, done);
+      const createdTask = await addTask(stageId, title, description, done);
+      if (createdTask?.id) {
+        await applyTaskAttachmentChanges({
+          taskId: createdTask.id,
+          projectId: currentProjectId,
+          newFiles,
+          removedAttachments: []
+        });
+      }
       showToast('Task added successfully.', 'success');
     } else {
       await editTask(taskId, title, description, done);
+      await applyTaskAttachmentChanges({
+        taskId,
+        projectId: currentProjectId,
+        newFiles,
+        removedAttachments
+      });
       showToast('Task updated successfully.', 'success');
     }
 
@@ -568,6 +660,14 @@ async function handleDeleteConfirm() {
   if (!pendingDeleteTaskId) return;
 
   try {
+    const attachments = currentTaskAttachmentsByTaskId.get(pendingDeleteTaskId) || [];
+    await applyTaskAttachmentChanges({
+      taskId: pendingDeleteTaskId,
+      projectId: currentProjectId,
+      newFiles: [],
+      removedAttachments: attachments
+    });
+
     await deleteTask(pendingDeleteTaskId);
     pendingDeleteTaskId = null;
 
@@ -586,32 +686,29 @@ async function handleDeleteConfirm() {
 function openTaskModal({ mode, stageId = '', task = null }) {
   const modalTitle = document.querySelector('#task-modal-title');
   const submitBtn = document.querySelector('#task-form-submit-btn');
-  const modeInput = document.querySelector('#task-form-mode');
-  const taskIdInput = document.querySelector('#task-form-task-id');
-  const stageIdInput = document.querySelector('#task-form-stage-id');
-  const titleInput = document.querySelector('#task-title-input');
-  const descriptionInput = document.querySelector('#task-description-input');
 
-  if (!modeInput || !taskIdInput || !stageIdInput || !titleInput || !descriptionInput || !taskModalInstance) {
+  if (!taskModalInstance) {
     return;
   }
 
   if (mode === 'add') {
-    modeInput.value = 'add';
-    taskIdInput.value = '';
-    stageIdInput.value = stageId;
-    titleInput.value = '';
-    descriptionInput.value = '';
-    setTaskStatusRadios(isDoneStage(stageId));
+    setTaskEditorValues({
+      mode: 'add',
+      stageId,
+      isDoneDefault: isDoneStage(stageId)
+    });
+    setTaskEditorAttachments([]);
     if (modalTitle) modalTitle.textContent = 'Add New Task';
     if (submitBtn) submitBtn.textContent = 'Add Task';
   } else if (task) {
-    modeInput.value = 'edit';
-    taskIdInput.value = task.id;
-    stageIdInput.value = task.stage_id;
-    titleInput.value = task.title || '';
-    descriptionInput.value = htmlToText(task.description_html || '');
-    setTaskStatusRadios(Boolean(task.done));
+    setTaskEditorValues({
+      mode: 'edit',
+      task: {
+        ...task,
+        description: htmlToText(task.description_html || '')
+      }
+    });
+    setTaskEditorAttachments(currentTaskAttachmentsByTaskId.get(task.id) || []);
     if (modalTitle) modalTitle.textContent = 'Edit Task';
     if (submitBtn) submitBtn.textContent = 'Save Changes';
   }
@@ -635,7 +732,7 @@ async function addTask(stageId, title, description, done) {
   const supabase = getSupabase();
   const nextPosition = getNextPositionForStage(stageId);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('tasks')
     .insert({
       project_id: currentProjectId,
@@ -644,11 +741,15 @@ async function addTask(stageId, title, description, done) {
       description_html: textToHtml(description),
       position: nextPosition,
       done
-    });
+    })
+    .select('id, project_id')
+    .single();
 
   if (error) {
     throw error;
   }
+
+  return data;
 }
 
 async function editTask(taskId, title, description, done) {
@@ -680,6 +781,100 @@ async function deleteTask(taskId) {
   if (error) {
     throw error;
   }
+}
+
+async function applyTaskAttachmentChanges({ taskId, projectId, newFiles, removedAttachments }) {
+  const supabase = getSupabase();
+  const filesToUpload = newFiles || [];
+  const attachmentsToRemove = removedAttachments || [];
+
+  if (attachmentsToRemove.length) {
+    const storagePaths = attachmentsToRemove
+      .map((attachment) => attachment.storage_path)
+      .filter(Boolean);
+
+    if (storagePaths.length) {
+      const { error: storageRemoveError } = await supabase
+        .storage
+        .from(TASK_ATTACHMENTS_BUCKET)
+        .remove(storagePaths);
+
+      if (storageRemoveError) {
+        throw storageRemoveError;
+      }
+    }
+
+    const attachmentIds = attachmentsToRemove.map((attachment) => attachment.id);
+    if (attachmentIds.length) {
+      const { error: deleteRowsError } = await supabase
+        .from('task_attachments')
+        .delete()
+        .in('id', attachmentIds)
+        .eq('task_id', taskId);
+
+      if (deleteRowsError) {
+        throw deleteRowsError;
+      }
+    }
+  }
+
+  if (!filesToUpload.length) {
+    return;
+  }
+
+  const uploadedMetadata = [];
+
+  try {
+    for (const file of filesToUpload) {
+      const storagePath = `${taskId}/${crypto.randomUUID()}-${sanitizeFileName(file.name)}`;
+      const { error: uploadError } = await supabase
+        .storage
+        .from(TASK_ATTACHMENTS_BUCKET)
+        .upload(storagePath, file, {
+          upsert: false,
+          contentType: file.type || undefined
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      uploadedMetadata.push({
+        project_id: projectId,
+        task_id: taskId,
+        storage_path: storagePath,
+        file_name: file.name,
+        file_type: file.type || null,
+        file_size: file.size || 0,
+        created_by: getCurrentUser()?.id || null
+      });
+    }
+
+    if (uploadedMetadata.length) {
+      const { error: insertMetadataError } = await supabase
+        .from('task_attachments')
+        .insert(uploadedMetadata);
+
+      if (insertMetadataError) {
+        throw insertMetadataError;
+      }
+    }
+  } catch (error) {
+    const uploadedPaths = uploadedMetadata.map((item) => item.storage_path);
+    if (uploadedPaths.length) {
+      await supabase.storage.from(TASK_ATTACHMENTS_BUCKET).remove(uploadedPaths);
+    }
+    throw error;
+  }
+}
+
+function sanitizeFileName(fileName) {
+  const name = String(fileName || 'file');
+  return name
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 180) || 'file';
 }
 
 function textToHtml(text) {
@@ -716,19 +911,6 @@ function isDoneStage(stageId) {
   const stage = currentStages.find(item => String(item.id) === String(stageId));
   if (!stage) return false;
   return /done/i.test(stage.title || '');
-}
-
-function getTaskStatusValue() {
-  const checked = document.querySelector('input[name="task-status"]:checked');
-  return checked?.value || 'open';
-}
-
-function setTaskStatusRadios(isDone) {
-  const openRadio = document.querySelector('#task-status-open');
-  const doneRadio = document.querySelector('#task-status-done');
-
-  if (openRadio) openRadio.checked = !isDone;
-  if (doneRadio) doneRadio.checked = isDone;
 }
 
 function showError(message) {
