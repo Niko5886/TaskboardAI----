@@ -1,3 +1,5 @@
+import { Toast } from 'bootstrap';
+
 /**
  * Show a toast notification
  * @param {string} message - The message to display
@@ -49,7 +51,7 @@ export function showToast(message, type = 'info', duration = 3000) {
 
   // Initialize and show Bootstrap toast
   const toastEl = document.getElementById(toastId);
-  const bsToast = new (window.bootstrap || {}).Toast(toastEl, { autohide: true, delay: duration });
+  const bsToast = new Toast(toastEl, { autohide: true, delay: duration });
   bsToast.show();
 
   // Remove from DOM after hidden
