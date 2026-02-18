@@ -56,6 +56,21 @@
   transform: translateY(-2px);
 }
 
+/* Clickable Project Titles */
+.table tbody td a[data-navigo] strong {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.table tbody td a[data-navigo]:hover strong {
+  color: #0056b3 !important;
+}
+
+.table tbody td a[data-navigo] {
+  display: block;
+  cursor: pointer;
+}
+
 /* Delete Modal */
 #deleteModal .modal-header {
   border-bottom: none;

@@ -87,7 +87,9 @@ function createProjectRow(project) {
   return `
     <tr data-project-id="${project.id}">
       <td>
-        <strong>${escapeHtml(project.title)}</strong>
+        <a href="/projects/${project.id}" data-navigo class="text-decoration-none">
+          <strong class="text-primary">${escapeHtml(project.title)}</strong>
+        </a>
       </td>
       <td class="text-muted">${escapeHtml(description)}</td>
       <td>${createdDate}</td>
