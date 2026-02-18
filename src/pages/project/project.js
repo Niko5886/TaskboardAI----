@@ -76,6 +76,9 @@ export async function setupProjectPage(projectId) {
     if (loadingSpinner) loadingSpinner.style.display = 'none';
     if (taskboardContainer) taskboardContainer.style.display = 'block';
 
+    // Update project info table with stats
+    updateProjectInfoTable(project, stages, tasks);
+
     // Render taskboard
     renderTaskboard(stages, tasks);
     setupAddTaskButton();
@@ -94,6 +97,28 @@ function updateProjectHeader(project) {
   if (titleEl) titleEl.textContent = project.title;
   if (descriptionEl) descriptionEl.textContent = project.description || 'No description';
   if (breadcrumbEl) breadcrumbEl.textContent = project.title;
+}
+
+function updateProjectInfoTable(project, stages, tasks) {
+  const infoContainer = document.querySelector('#project-info-container');
+  const infoTitle = document.querySelector('#info-title');
+  const infoDescription = document.querySelector('#info-description');
+  const infoOpenTasks = document.querySelector('#info-open-tasks');
+  const infoDoneTasks = document.querySelector('#info-done-tasks');
+  const infoStages = document.querySelector('#info-stages');
+
+  if (infoTitle) infoTitle.textContent = project.title;
+  if (infoDescription) infoDescription.textContent = project.description || '-';
+  
+  const openTasksCount = tasks.filter(t => !t.done).length;
+  const doneTasksCount = tasks.filter(t => t.done).length;
+  const stagesCount = stages.length;
+
+  if (infoOpenTasks) infoOpenTasks.innerHTML = `<span class="badge bg-warning text-dark">${openTasksCount}</span>`;
+  if (infoDoneTasks) infoDoneTasks.innerHTML = `<span class="badge bg-success">${doneTasksCount}</span>`;
+  if (infoStages) infoStages.innerHTML = `<span class="badge bg-info">${stagesCount}</span>`;
+
+  if (infoContainer) infoContainer.style.display = 'block';
 }
 
 function renderTaskboard(stages, tasks) {

@@ -31,6 +31,43 @@
   text-decoration: underline;
 }
 
+/* Project Info Table */
+#project-info-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+#project-info-container .table {
+  margin-bottom: 0;
+}
+
+#project-info-container .table thead {
+  background: #f8f9fa;
+}
+
+#project-info-container .table thead th {
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  padding: 14px 12px;
+}
+
+#project-info-container .table tbody td {
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+
+#project-info-container .table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+#project-info-container .badge {
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
 /* Taskboard Layout */
 .taskboard {
   background: transparent;
