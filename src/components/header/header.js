@@ -26,9 +26,14 @@ function setupAuthLinks() {
   // Listen for auth changes
   onAuthChange((user) => {
     const authLinksContainer = document.querySelector('#auth-links');
+    const dashboardNavItem = document.querySelector('#dashboard-nav-item');
+    const projectsNavItem = document.querySelector('#projects-nav-item');
     
     if (user) {
-      // User is logged in
+      // User is logged in - show Dashboard and Projects links
+      if (dashboardNavItem) dashboardNavItem.style.display = '';
+      if (projectsNavItem) projectsNavItem.style.display = '';
+      
       if (!authLinksContainer) {
         const newContainer = document.createElement('li');
         newContainer.id = 'auth-links';
@@ -39,7 +44,6 @@ function setupAuthLinks() {
             ${user.email}
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="/dashboard" data-navigo>Dashboard</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="#" id="logout-btn">
               <i class="bi bi-box-arrow-right me-2"></i>Logout
@@ -50,7 +54,10 @@ function setupAuthLinks() {
         setupLogoutButton();
       }
     } else {
-      // User is logged out
+      // User is logged out - hide Dashboard and Projects links
+      if (dashboardNavItem) dashboardNavItem.style.display = 'none';
+      if (projectsNavItem) projectsNavItem.style.display = 'none';
+      
       const authLinksContainer = document.querySelector('#auth-links');
       if (authLinksContainer) {
         authLinksContainer.remove();
@@ -69,9 +76,16 @@ function setupAuthLinks() {
   });
 
   // Initial setup
+  const dashboardNavItem = document.querySelector('#dashboard-nav-item');
+  const projectsNavItem = document.querySelector('#projects-nav-item');
+  
   if (isAuthenticated()) {
     const user = getCurrentUser();
     if (user) {
+      // Show Dashboard and Projects links
+      if (dashboardNavItem) dashboardNavItem.style.display = '';
+      if (projectsNavItem) projectsNavItem.style.display = '';
+      
       const container = document.createElement('li');
       container.id = 'auth-links';
       container.className = 'nav-item dropdown';
@@ -81,7 +95,6 @@ function setupAuthLinks() {
           ${user.email}
         </a>
         <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" href="/dashboard" data-navigo>Dashboard</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="#" id="logout-btn">
             <i class="bi bi-box-arrow-right me-2"></i>Logout
@@ -92,6 +105,10 @@ function setupAuthLinks() {
       setupLogoutButton();
     }
   } else {
+    // Hide Dashboard and Projects links
+    if (dashboardNavItem) dashboardNavItem.style.display = 'none';
+    if (projectsNavItem) projectsNavItem.style.display = 'none';
+    
     const loginContainer = document.createElement('li');
     loginContainer.className = 'nav-item ms-2';
     loginContainer.innerHTML = `
