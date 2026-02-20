@@ -77,13 +77,11 @@ export async function setupProjectPage(projectId) {
 
 async function loadProjectData() {
   const supabase = getSupabase();
-  const currentUser = getCurrentUser();
 
   const { data: project, error: projectError } = await supabase
     .from('projects')
     .select('*')
     .eq('id', currentProjectId)
-    .eq('owner_id', currentUser.id)
     .single();
 
   if (projectError || !project) {

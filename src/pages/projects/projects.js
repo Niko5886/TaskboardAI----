@@ -49,7 +49,6 @@ async function loadProjects() {
     const { data: projects, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_id', currentUser.id)
       .order('updated_at', { ascending: false });
 
     loadingEl?.classList.add('d-none');
@@ -66,7 +65,9 @@ async function loadProjects() {
     }
 
     // Render projects table
-    tbody.innerHTML = projects.map(project => createProjectRow(project)).join('');
+    tbody.innerHTML = projects
+      .map(project => createProjectRow(project, project.owner_id === currentUser.id))
+      .join('');
     tableContainer?.classList.remove('d-none');
 
     // Setup action buttons
@@ -79,10 +80,20 @@ async function loadProjects() {
   }
 }
 
-function createProjectRow(project) {
+function createProjectRow(project, isOwner) {
   const createdDate = new Date(project.created_at).toLocaleDateString();
   const updatedDate = new Date(project.updated_at).toLocaleDateString();
   const description = project.description || 'No description';
+  const ownerActions = isOwner
+    ? `
+          <a href="/projects/edit/${project.id}" class="btn btn-sm btn-outline-secondary" data-navigo title="Edit">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <button class="btn btn-sm btn-outline-danger delete-project-btn" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" title="Delete">
+            <i class="bi bi-trash"></i>
+          </button>
+      `
+    : '';
 
   return `
     <tr data-project-id="${project.id}">
@@ -99,12 +110,7 @@ function createProjectRow(project) {
           <a href="/projects/${project.id}" class="btn btn-sm btn-outline-primary" data-navigo title="View">
             <i class="bi bi-eye"></i>
           </a>
-          <a href="/projects/edit/${project.id}" class="btn btn-sm btn-outline-secondary" data-navigo title="Edit">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <button class="btn btn-sm btn-outline-danger delete-project-btn" data-project-id="${project.id}" data-project-title="${escapeHtml(project.title)}" title="Delete">
-            <i class="bi bi-trash"></i>
-          </button>
+          ${ownerActions}
         </div>
       </td>
     </tr>

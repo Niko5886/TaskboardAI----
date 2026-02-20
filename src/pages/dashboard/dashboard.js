@@ -24,11 +24,11 @@ export async function setupDashboardPage() {
   try {
     const supabase = getSupabase();
     
-    // Fetch user's projects (owned by user)
+    // Fetch user's projects (owner or member via RLS)
     const { data: projects, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_id', currentUser.id);
+      .order('updated_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching projects:', error);

@@ -50,6 +50,40 @@
         <div class="form-text">Brief overview of what this project is about</div>
       </div>
 
+      <!-- Members -->
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Project Members</label>
+        <div class="members-card border rounded p-3">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+              <label for="member-search" class="form-label small text-muted mb-1">Search or enter member email</label>
+              <input
+                type="text"
+                class="form-control"
+                id="member-search"
+                placeholder="e.g., maria@gmail.com or type to search"
+                autocomplete="off"
+              >
+            </div>
+            <div class="col-md-4">
+              <button type="button" class="btn btn-outline-primary w-100" id="add-member-btn">
+                <i class="bi bi-person-plus me-2"></i>Add Member
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-2">
+            <select class="form-select" id="member-select" size="5" aria-label="Member options"></select>
+            <div class="form-text small">Search all registered users by email and add them to this project.</div>
+          </div>
+
+          <div class="mt-3">
+            <div class="small text-muted mb-2">Selected members</div>
+            <div id="selected-members" class="d-flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="d-flex gap-2 justify-content-end">
         <a href="/projects" class="btn btn-outline-secondary" data-navigo>
